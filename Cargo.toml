@@ -1,0 +1,10 @@
+[package]
+name = "rust_2d_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sdl2 = "0.35"
+nalgebra = "0.32"
+specs = "0.20"
+specs-derive = "0.4"
