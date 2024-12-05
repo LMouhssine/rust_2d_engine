@@ -1,5 +1,6 @@
 use sdl2::rect::Rect;
 use specs::World;
+use specs::WorldExt;
 use crate::components::{Position, Renderable, Velocity, Player};
 
 pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Result<(), String> {
@@ -7,9 +8,9 @@ pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video:
     
     let positions = world.read_storage::<Position>();
     let renderables = world.read_storage::<Renderable>();
-
     for (pos, render) in (&positions, &renderables).join() {
-        canvas.set_draw_color(render.color);
+        let color = render.color;
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(color.0 as u8, color.1 as u8, color.2 as u8));
         canvas.fill_rect(Rect::new(
             pos.x as i32,
             pos.y as i32,

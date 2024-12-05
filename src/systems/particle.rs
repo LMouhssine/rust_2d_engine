@@ -1,8 +1,7 @@
 // src/systems/particle.rs
-use specs::{System, ReadStorage, WriteStorage, Entities, Join, LazyUpdate, Read};
+use specs::{System, ReadStorage, Entities, Join, LazyUpdate, Read, Builder};
 use crate::components::{Position, ParticleEmitter, Renderable, Velocity};
 use rand::Rng;
-use sdl2::pixels::Color;
 
 pub struct ParticleSystem;
 
@@ -17,7 +16,7 @@ impl<'a> System<'a> for ParticleSystem {
     fn run(&mut self, (entities, positions, emitters, lazy): Self::SystemData) {
         let mut rng = rand::thread_rng();
         
-        for (entity, pos, emitter) in (&entities, &positions, &emitters).join() {
+        for (_entity, pos, emitter) in (&entities, &positions, &emitters).join() {
             if rng.gen::<f32>() < emitter.rate {
                 let particle_pos = Position {
                     x: pos.x,

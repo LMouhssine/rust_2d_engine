@@ -1,16 +1,18 @@
 // src/main.rs
+
 mod components;
-mod systems;
+mod systems; // Assurez-vous que ce module est correctement déclaré
 mod utils;
 
 use specs::{World, WorldExt, Builder, DispatcherBuilder};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
-use crate::components::*;
-use crate::systems::*;
+use crate::components::{Player, Renderable, Position, Velocity, Collidable, ParticleEmitter};
+// Importation des systèmes
+use crate::systems::{MovementSystem, CollisionSystem, ParticleSystem}; // Importations des systèmes
+use crate::utils::{handle_input, render_game};
 
 pub struct GameState {
     world: World,
@@ -43,14 +45,14 @@ impl GameState {
             .with(Renderable {
                 width: 50.0,
                 height: 50.0,
-                color: Color::RGB(255, 255, 255),
+                color: (255.0, 255.0, 255.0),
             })
             .with(Player { speed: 300.0 })
             .with(Collidable { radius: 25.0 })
             .with(ParticleEmitter {
                 rate: 10.0,
                 lifetime: 1.0,
-                color: Color::RGB(200, 200, 255),
+                color: (200.0, 200.0, 255.0),
             })
             .build();
 
@@ -64,7 +66,7 @@ impl GameState {
                 .with(Renderable {
                     width: 30.0,
                     height: 30.0,
-                    color: Color::RGB(255, 100, 100),
+                    color: (255.0, 100.0, 100.0),
                 })
                 .with(Collidable { radius: 15.0 })
                 .build();
@@ -72,31 +74,31 @@ impl GameState {
 
         GameState { world, dispatcher }
     }
-
+    
     pub fn update(&mut self, delta_time: f32) {
-        self.world.insert(DeltaTime(delta_time));
+        self.world.insert(delta_time);
         self.dispatcher.dispatch(&self.world);
         self.world.maintain();
     }
 }
 
 fn main() -> Result<(), String> {
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
+    let sdl_context = sdl2::init().map_err(|e| format!("Erreur d'initialisation SDL: {}", e))?;
+    let video_subsystem = sdl_context.video().map_err(|e| format!("Erreur de sous-système vidéo: {}", e))?;
     
     let window = video_subsystem.window("Moteur de Jeu 2D Avancé", 800, 600)
         .position_centered()
         .opengl()
         .build()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Erreur de création de la fenêtre: {}", e))?;
         
     let mut canvas = window.into_canvas()
         .accelerated()
         .present_vsync()
         .build()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Erreur de création du canvas: {}", e))?;
         
-    let mut event_pump = sdl_context.event_pump()?;
+    let mut event_pump = sdl_context.event_pump().map_err(|e| format!("Erreur de création de l'event pump: {}", e))?;
     let mut game_state = GameState::new();
     let mut last_update = Instant::now();
     
@@ -126,97 +128,13 @@ fn main() -> Result<(), String> {
 
         // Mise à jour
         game_state.update(delta_time);
-
         // Rendu
-        canvas.set_draw_color(Color::RGB(0, 0, 40));
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 0, 40));
         canvas.clear();
         
         render_game(&game_state.world, &mut canvas)?;
-        
         canvas.present();
     }
 
     Ok(())
-}
-
-// src/components.rs
-use specs::{Component, VecStorage};
-use sdl2::pixels::Color;
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct Position {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct Velocity {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct Renderable {
-    pub width: f32,
-    pub height: f32,
-    pub color: Color,
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct Player {
-    pub speed: f32,
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct Collidable {
-    pub radius: f32,
-}
-
-#[derive(Component, Debug)]
-#[storage(VecStorage)]
-pub struct ParticleEmitter {
-    pub rate: f32,
-    pub lifetime: f32,
-    pub color: Color,
-}
-
-pub struct DeltaTime(pub f32);
-
-// src/systems/mod.rs
-mod movement;
-mod collision;
-mod particle;
-
-pub use self::movement::MovementSystem;
-pub use self::collision::CollisionSystem;
-pub use self::particle::ParticleSystem;
-
-// src/systems/movement.rs
-use specs::{System, ReadStorage, WriteStorage, Join};
-use crate::components::{Position, Velocity, DeltaTime};
-
-pub struct MovementSystem;
-
-impl<'a> System<'a> for MovementSystem {
-    type SystemData = (
-        WriteStorage<'a, Position>,
-        ReadStorage<'a, Velocity>,
-        specs::Read<'a, DeltaTime>,
-    );
-
-    fn run(&mut self, (mut positions, velocities, delta_time): Self::SystemData) {
-        for (pos, vel) in (&mut positions, &velocities).join() {
-            pos.x += vel.x * delta_time.0;
-            pos.y += vel.y * delta_time.0;
-            
-            // Garder dans les limites de l'écran
-            pos.x = pos.x.clamp(0.0, 800.0);
-            pos.y = pos.y.clamp(0.0, 600.0);
-        }
-    }
 }
