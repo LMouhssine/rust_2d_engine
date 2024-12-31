@@ -1,11 +1,9 @@
-// src/systems/mod.rs
-
-// Déclaration des modules
-pub mod movement; // Ajoutez ce module pour le rendre public
+pub mod movement;
 pub mod collision;
 pub mod particle;
+pub mod collectible;
 
-// Export des systèmes
 pub use self::collision::CollisionSystem;
 pub use self::particle::ParticleSystem;
-pub use self::movement::MovementSystem; // Ajoutez cette ligne pour rendre MovementSystem accessible
+pub use self::movement::MovementSystem;
+pub use self::collectible::CollectibleSystem;

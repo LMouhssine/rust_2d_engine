@@ -1,7 +1,5 @@
-// src/main.rs
-
 mod components;
-mod systems; // Assurez-vous que ce module est correctement déclaré
+mod systems;
 mod utils;
 
 use specs::{World, WorldExt, Builder, DispatcherBuilder};
@@ -9,9 +7,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::time::Instant;
 
-use crate::components::{Player, Renderable, Position, Velocity, Collidable, ParticleEmitter};
-// Importation des systèmes
-use crate::systems::{MovementSystem, CollisionSystem, ParticleSystem}; // Importations des systèmes
+use crate::components::{Player, Renderable, Position, Velocity, Collidable, ParticleEmitter, Collectible, Lifetime}; // Ajoute `Lifetime` ici
+use crate::systems::{MovementSystem, CollisionSystem, ParticleSystem, CollectibleSystem};
 use crate::utils::{handle_input, render_game};
 
 pub struct GameState {
@@ -23,22 +20,22 @@ impl GameState {
     pub fn new() -> Self {
         let mut world = World::new();
         
-        // Enregistrement des composants
         world.register::<Position>();
         world.register::<Velocity>();
         world.register::<Renderable>();
         world.register::<Player>();
         world.register::<Collidable>();
         world.register::<ParticleEmitter>();
+        world.register::<Lifetime>();
+        world.register::<Collectible>();
 
-        // Création du dispatcher
         let dispatcher = DispatcherBuilder::new()
             .with(MovementSystem, "movement", &[])
             .with(CollisionSystem, "collision", &["movement"])
             .with(ParticleSystem, "particle", &["movement"])
+            .with(CollectibleSystem, "collectible", &["collision"])
             .build();
 
-        // Création du joueur
         world.create_entity()
             .with(Position { x: 400.0, y: 300.0 })
             .with(Velocity { x: 0.0, y: 0.0 })
@@ -47,7 +44,7 @@ impl GameState {
                 height: 50.0,
                 color: (255.0, 255.0, 255.0),
             })
-            .with(Player { speed: 300.0 })
+            .with(Player { speed: 300.0, score: 0 })
             .with(Collidable { radius: 25.0 })
             .with(ParticleEmitter {
                 rate: 10.0,
@@ -56,7 +53,6 @@ impl GameState {
             })
             .build();
 
-        // Ajout d'obstacles
         for i in 0..5 {
             world.create_entity()
                 .with(Position {
@@ -69,6 +65,7 @@ impl GameState {
                     color: (255.0, 100.0, 100.0),
                 })
                 .with(Collidable { radius: 15.0 })
+                .with(Collectible)
                 .build();
         }
 
@@ -104,12 +101,10 @@ fn main() -> Result<(), String> {
     
     let mut running = true;
     while running {
-        // Calcul du delta time
         let now = Instant::now();
         let delta_time = now.duration_since(last_update).as_secs_f32();
         last_update = now;
 
-        // Gestion des événements
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
@@ -126,9 +121,7 @@ fn main() -> Result<(), String> {
             }
         }
 
-        // Mise à jour
         game_state.update(delta_time);
-        // Rendu
         canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 0, 40));
         canvas.clear();
         

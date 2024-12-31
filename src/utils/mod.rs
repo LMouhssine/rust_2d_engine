@@ -5,7 +5,7 @@ use crate::components::{Position, Renderable, Velocity, Player};
 
 pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Result<(), String> {
     use specs::Join;
-    
+
     let positions = world.read_storage::<Position>();
     let renderables = world.read_storage::<Renderable>();
     for (pos, render) in (&positions, &renderables).join() {

@@ -1,8 +1,7 @@
 fn main() {
     println!("cargo:rustc-link-search=/opt/homebrew/Cellar/sdl2/2.30.9/lib");
     println!("cargo:rustc-link-lib=dylib=SDL2-2.0.0");
-    
-    // Frameworks système nécessaires
+
     println!("cargo:rustc-link-lib=framework=CoreVideo");
     println!("cargo:rustc-link-lib=framework=Cocoa");
     println!("cargo:rustc-link-lib=framework=IOKit");
