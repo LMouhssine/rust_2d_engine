@@ -1,14 +1,8 @@
 fn main() {
-    println!("cargo:rustc-link-search=/opt/homebrew/Cellar/sdl2/2.30.9/lib");
-    println!("cargo:rustc-link-lib=dylib=SDL2-2.0.0");
-
-    println!("cargo:rustc-link-lib=framework=CoreVideo");
-    println!("cargo:rustc-link-lib=framework=Cocoa");
-    println!("cargo:rustc-link-lib=framework=IOKit");
-    println!("cargo:rustc-link-lib=framework=ForceFeedback");
-    println!("cargo:rustc-link-lib=framework=Carbon");
-    println!("cargo:rustc-link-lib=framework=CoreAudio");
-    println!("cargo:rustc-link-lib=framework=AudioToolbox");
-    println!("cargo:rustc-link-lib=framework=AVFoundation");
-    println!("cargo:rustc-link-lib=framework=Foundation");
+    // Add common search paths for macOS (Homebrew, etc.)
+    println!("cargo:rustc-link-search=/opt/homebrew/lib");
+    println!("cargo:rustc-link-search=/usr/local/lib");
+    
+    // We don't need to specify -lSDL2 here usually if the crate does it, 
+    // but adding search paths helps.
 }

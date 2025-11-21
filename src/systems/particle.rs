@@ -11,13 +11,15 @@ impl<'a> System<'a> for ParticleSystem {
         ReadStorage<'a, ParticleEmitter>,
         Read<'a, LazyUpdate>,
         WriteStorage<'a, Lifetime>,
+        Read<'a, f32>,
     );
 
-    fn run(&mut self, (entities, positions, emitters, lazy, mut lifetimes): Self::SystemData) {
+    fn run(&mut self, (entities, positions, emitters, lazy, mut lifetimes, delta_time): Self::SystemData) {
         let mut rng = rand::thread_rng();
+        let dt = *delta_time;
 
         for (_entity, pos, emitter) in (&entities, &positions, &emitters).join() {
-            if rng.gen::<f32>() < emitter.rate {
+            if rng.gen::<f32>() < emitter.rate * dt * 60.0 { // Rate per second approx
                 let particle_pos = Position {
                     x: pos.x,
                     y: pos.y,
@@ -43,9 +45,9 @@ impl<'a> System<'a> for ParticleSystem {
             }
         }
 
-        // Mise à jour de la durée de vie des particules
+        // Update lifetime
         for (entity, lifetime) in (&entities, &mut lifetimes).join() {
-            lifetime.remaining -= 0.016; // Supposons 60 FPS
+            lifetime.remaining -= dt;
             if lifetime.remaining <= 0.0 {
                 let _ = entities.delete(entity);
             }

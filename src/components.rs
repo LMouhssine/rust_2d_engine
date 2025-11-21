@@ -13,6 +13,7 @@ pub struct Renderable {
 #[storage(VecStorage)]
 pub struct Player {
     pub speed: f32,
+    pub jump_force: f32,
     pub score: i32,
 }
 
@@ -53,3 +54,15 @@ pub struct Lifetime {
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct Collectible;
+
+#[derive(Component, Debug, Default)]
+#[storage(NullStorage)]
+pub struct Gravity;
+
+#[derive(Component, Debug, Default)]
+#[storage(NullStorage)]
+pub struct Grounded;
+
+#[derive(Component, Debug, Default)]
+#[storage(NullStorage)]
+pub struct Platform;
