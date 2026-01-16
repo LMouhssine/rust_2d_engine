@@ -2,18 +2,26 @@ mod components;
 mod systems;
 mod utils;
 
-use specs::{World, WorldExt, Builder, DispatcherBuilder};
+use specs::{World, WorldExt, DispatcherBuilder};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::time::Instant;
 
-use crate::components::{Player, Renderable, Position, Velocity, Collidable, ParticleEmitter, Collectible, Lifetime, Gravity, Grounded, Platform};
-use crate::systems::{MovementSystem, CollisionSystem, ParticleSystem, LogicSystem};
-use crate::utils::{handle_input, render_game};
+use crate::components::{Player, Renderable, Position, Velocity, Collidable, ParticleEmitter, Collectible, Lifetime, Gravity, Grounded, Platform, Enemy, Health};
+use crate::systems::{MovementSystem, CollisionSystem, ParticleSystem, LogicSystem, EnemyAISystem};
+use crate::utils::{handle_input, render_game, level_loader::load_level};
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum GameMode {
+    Menu,
+    Playing,
+    GameOver,
+}
 
 pub struct GameState {
     world: World,
     dispatcher: specs::Dispatcher<'static, 'static>,
+    pub mode: GameMode,
 }
 
 impl GameState {
@@ -31,87 +39,33 @@ impl GameState {
         world.register::<Gravity>();
         world.register::<Grounded>();
         world.register::<Platform>();
+        world.register::<Enemy>();
+        world.register::<Health>();
 
         let dispatcher = DispatcherBuilder::new()
-            .with(MovementSystem, "movement", &[])
+            .with(EnemyAISystem, "enemy_ai", &[])
+            .with(MovementSystem, "movement", &["enemy_ai"])
             .with(CollisionSystem, "collision", &["movement"])
             .with(ParticleSystem, "particle", &["movement"])
             .with(LogicSystem, "logic", &["movement"])
             .build();
 
-        // Create Player
-        world.create_entity()
-            .with(Position { x: 100.0, y: 100.0 })
-            .with(Velocity { x: 0.0, y: 0.0 })
-            .with(Renderable {
-                width: 40.0,
-                height: 40.0,
-                color: (0.0, 255.0, 0.0), // Green Player
-            })
-            .with(Player { speed: 200.0, jump_force: 500.0, score: 0 })
-            .with(Collidable { radius: 20.0 })
-            .with(Gravity)
-            .with(ParticleEmitter {
-                rate: 2.0, // Emit occasionally
-                lifetime: 0.5,
-                color: (100.0, 255.0, 100.0),
-            })
-            .build();
+        // Load Initial Level
+        let level_data = "
+####################
+#                  #
+#   C   C   C      #
+#  ### ### ###     #
+#                  #
+#      E           #
+#    #####         #
+#            C     #
+#   P      #####   #
+####################
+";
+        load_level(&mut world, level_data);
 
-        // Create Ground Platform
-        world.create_entity()
-            .with(Position { x: 0.0, y: 550.0 })
-            .with(Renderable {
-                width: 800.0,
-                height: 50.0,
-                color: (100.0, 100.0, 100.0),
-            })
-            .with(Collidable { radius: 400.0 }) // Radius doesn't make sense for rect, but used in collision logic? 
-            // My collision logic used radius for platform width/2? 
-            // Let's check collision.rs: 
-            // let platform_rect = (platform_pos.x, platform_pos.y, platform_collider.radius * 2.0, 20.0);
-            // So radius * 2 = width. Width 800 -> Radius 400.
-            .with(Platform)
-            .build();
-
-        // Create Floating Platforms
-        let platforms = vec![
-            (200.0, 400.0, 100.0),
-            (400.0, 300.0, 100.0),
-            (600.0, 200.0, 100.0),
-        ];
-
-        for (x, y, w) in platforms {
-            world.create_entity()
-                .with(Position { x, y })
-                .with(Renderable {
-                    width: w,
-                    height: 20.0,
-                    color: (150.0, 150.0, 255.0),
-                })
-                .with(Collidable { radius: w / 2.0 })
-                .with(Platform)
-                .build();
-        }
-
-        // Create Collectibles
-        for i in 0..5 {
-            world.create_entity()
-                .with(Position {
-                    x: 220.0 + i as f32 * 100.0,
-                    y: 150.0 + (i % 2) as f32 * 100.0,
-                })
-                .with(Renderable {
-                    width: 20.0,
-                    height: 20.0,
-                    color: (255.0, 215.0, 0.0), // Gold
-                })
-                .with(Collidable { radius: 10.0 })
-                .with(Collectible)
-                .build();
-        }
-
-        GameState { world, dispatcher }
+        GameState { world, dispatcher, mode: GameMode::Menu }
     }
     
     pub fn update(&mut self, delta_time: f32) {
@@ -158,18 +112,46 @@ fn main() -> Result<(), String> {
                     running = false;
                 },
                 Event::KeyDown { keycode: Some(key), .. } => {
-                    handle_input(&mut game_state.world, key, true);
+                    if game_state.mode == GameMode::Menu {
+                        game_state.mode = GameMode::Playing;
+                    } else if game_state.mode == GameMode::Playing {
+                        handle_input(&mut game_state.world, key, true);
+                    } else if game_state.mode == GameMode::GameOver {
+                        game_state.mode = GameMode::Menu;
+                    }
                 },
                 Event::KeyUp { keycode: Some(key), .. } => {
-                    handle_input(&mut game_state.world, key, false);
+                    if game_state.mode == GameMode::Playing {
+                        handle_input(&mut game_state.world, key, false);
+                    }
                 },
                 _ => {}
             }
         }
 
-        game_state.update(delta_time);
+        if game_state.mode == GameMode::Playing {
+            game_state.update(delta_time);
+            
+            // Check Lose Condition (Fall off screen)
+            let positions = game_state.world.read_storage::<Position>();
+            let players = game_state.world.read_storage::<Player>();
+            use specs::Join;
+            for (_player, pos) in (&players, &positions).join() {
+                if pos.y > 600.0 {
+                    game_state.mode = GameMode::GameOver;
+                }
+            }
+            
+            // Win condition (Score >= 100)
+            for player in (&players).join() {
+                if player.score >= 100 {
+                    // Could also be a win state, but for now just loop or game over
+                    game_state.mode = GameMode::GameOver;
+                }
+            }
+        }
         
-        render_game(&game_state.world, &mut canvas)?;
+        render_game(&game_state.world, &mut canvas, game_state.mode)?;
         canvas.present();
     }
 

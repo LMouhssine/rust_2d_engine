@@ -6,7 +6,7 @@ use specs_derive::Component;
 pub struct Renderable {
     pub width: f32,
     pub height: f32,
-    pub color: (f32, f32, f32),
+    pub color: (u8, u8, u8), // Changed to u8 for SDL2 direct use
 }
 
 #[derive(Component, Debug)]
@@ -28,7 +28,7 @@ pub struct Collidable {
 pub struct ParticleEmitter {
     pub rate: f32,
     pub lifetime: f32,
-    pub color: (f32, f32, f32),
+    pub color: (u8, u8, u8),
 }
 
 #[derive(Component, Debug)]
@@ -66,3 +66,23 @@ pub struct Grounded;
 #[derive(Component, Debug, Default)]
 #[storage(NullStorage)]
 pub struct Platform;
+
+#[derive(Component, Debug, Default)]
+#[storage(NullStorage)]
+pub struct Enemy;
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+pub struct Health {
+    pub current: i32,
+    pub max: i32,
+}
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+pub struct Animation {
+    pub frames: Vec<usize>,
+    pub current_frame: usize,
+    pub timer: f32,
+    pub frame_duration: f32,
+}

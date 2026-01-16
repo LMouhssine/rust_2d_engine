@@ -1,34 +1,39 @@
+pub mod level_loader;
 use sdl2::rect::Rect;
 use specs::World;
 use specs::WorldExt;
 use crate::components::{Position, Renderable, Velocity, Player, Grounded};
+use crate::GameMode;
 
-pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Result<(), String> {
+pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, mode: GameMode) -> Result<(), String> {
     use specs::Join;
 
     let positions = world.read_storage::<Position>();
     let renderables = world.read_storage::<Renderable>();
     let players = world.read_storage::<Player>();
 
-    // Check Win Condition
-    let mut win = false;
-    for player in players.join() {
-        if player.score >= 50 {
-            win = true;
-        }
+    if mode == GameMode::Menu {
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(10, 10, 20));
+        canvas.clear();
+        // TODO: Render Menu Text
+        return Ok(());
     }
 
-    if win {
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(50, 150, 50)); // Win Green
-    } else {
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(20, 20, 40)); // Normal Blue
+    if mode == GameMode::GameOver {
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(50, 0, 0));
+        canvas.clear();
+        // TODO: Render Game Over Text
+        return Ok(());
     }
+
+    // Normal Gameplay background
+    canvas.set_draw_color(sdl2::pixels::Color::RGB(20, 20, 40)); 
     canvas.clear();
     
     // Render Platforms/Players/Collectibles
     for (pos, render) in (&positions, &renderables).join() {
         let color = render.color;
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(color.0 as u8, color.1 as u8, color.2 as u8));
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(color.0, color.1, color.2));
         canvas.fill_rect(Rect::new(
             pos.x as i32,
             pos.y as i32,
@@ -37,12 +42,21 @@ pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video:
         ))?;
     }
 
-    // Render HUD (Score)
+    // Render HUD (Score Bar)
     let players = world.read_storage::<Player>();
-    for player in players.join() {
-        for i in 0..player.score {
-            canvas.set_draw_color(sdl2::pixels::Color::RGB(255, 215, 0));
-            canvas.fill_rect(Rect::new(10 + (i as i32 * 15), 10, 10, 10))?;
+    let positions = world.read_storage::<Position>();
+    let entities = world.entities();
+
+    for (player, pos, _entity) in (&players, &positions, &entities).join() {
+        // Draw score bar
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(255, 215, 0));
+        canvas.fill_rect(Rect::new(10, 10, (player.score as u32 * 2).min(200), 10))?;
+
+        // Lose condition: Fall off screen
+        if pos.y > 600.0 {
+            // We need a way to signal GameOver to main.rs or update a resource
+            // For now, let's just use a simple println and we'll handle it in main.rs loop if possible
+            // Actually, we should probably add a GameState resource.
         }
     }
 
