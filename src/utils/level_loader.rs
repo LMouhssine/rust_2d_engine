@@ -43,6 +43,19 @@ pub fn load_level(world: &mut World, level_data: &str) {
                         .with(Collectible)
                         .build();
                 },
+                'G' => { // Goal
+                    world.create_entity()
+                        .with(Position { x: pos_x, y: pos_y })
+                        .with(Renderable { width: 40.0, height: 60.0, color: (0, 255, 255) }) // Cyan Portal
+                        .with(Goal)
+                        .build();
+                },
+                '?' => { // Tutorial Hint (Square)
+                    world.create_entity()
+                        .with(Position { x: pos_x, y: pos_y })
+                        .with(Renderable { width: 40.0, height: 40.0, color: (200, 200, 255) })
+                        .build();
+                },
                 _ => {}
             }
         }

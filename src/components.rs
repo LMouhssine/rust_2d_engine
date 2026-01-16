@@ -20,6 +20,7 @@ pub struct Player {
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct Collidable {
+    #[allow(dead_code)]
     pub radius: f32,
 }
 
@@ -73,6 +74,7 @@ pub struct Enemy;
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
+#[allow(dead_code)]
 pub struct Health {
     pub current: i32,
     pub max: i32,
@@ -80,9 +82,14 @@ pub struct Health {
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
+#[allow(dead_code)]
 pub struct Animation {
     pub frames: Vec<usize>,
     pub current_frame: usize,
     pub timer: f32,
     pub frame_duration: f32,
 }
+
+#[derive(Component, Debug, Default)]
+#[storage(NullStorage)]
+pub struct Goal;

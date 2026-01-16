@@ -11,24 +11,33 @@ pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video:
     let positions = world.read_storage::<Position>();
     let renderables = world.read_storage::<Renderable>();
     let players = world.read_storage::<Player>();
+    let entities = world.entities();
 
     if mode == GameMode::Menu {
         canvas.set_draw_color(sdl2::pixels::Color::RGB(10, 10, 20));
         canvas.clear();
-        // TODO: Render Menu Text
+        // Light color for the "Start" hint
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(100, 100, 255));
+        canvas.fill_rect(Rect::new(300, 400, 200, 50))?;
         return Ok(());
     }
 
-    if mode == GameMode::GameOver {
+    if mode == GameMode::Tutorial {
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(20, 40, 60)); // Steel blue for tutorial
+        canvas.clear();
+    } else if mode == GameMode::GameOver {
         canvas.set_draw_color(sdl2::pixels::Color::RGB(50, 0, 0));
         canvas.clear();
-        // TODO: Render Game Over Text
         return Ok(());
+    } else if mode == GameMode::Win {
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 100, 0)); // Dark green for win
+        canvas.clear();
+        return Ok(());
+    } else {
+        // Normal Gameplay background
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(20, 20, 40)); 
+        canvas.clear();
     }
-
-    // Normal Gameplay background
-    canvas.set_draw_color(sdl2::pixels::Color::RGB(20, 20, 40)); 
-    canvas.clear();
     
     // Render Platforms/Players/Collectibles
     for (pos, render) in (&positions, &renderables).join() {
@@ -43,10 +52,6 @@ pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video:
     }
 
     // Render HUD (Score Bar)
-    let players = world.read_storage::<Player>();
-    let positions = world.read_storage::<Position>();
-    let entities = world.entities();
-
     for (player, pos, _entity) in (&players, &positions, &entities).join() {
         // Draw score bar
         canvas.set_draw_color(sdl2::pixels::Color::RGB(255, 215, 0));
@@ -54,9 +59,7 @@ pub fn render_game(world: &World, canvas: &mut sdl2::render::Canvas<sdl2::video:
 
         // Lose condition: Fall off screen
         if pos.y > 600.0 {
-            // We need a way to signal GameOver to main.rs or update a resource
-            // For now, let's just use a simple println and we'll handle it in main.rs loop if possible
-            // Actually, we should probably add a GameState resource.
+            // Signal GameOver
         }
     }
 
@@ -69,10 +72,6 @@ pub fn handle_input(world: &mut World, keycode: sdl2::keyboard::Keycode, pressed
     let players = world.read_storage::<Player>();
     let grounded = world.read_storage::<Grounded>();
     let entities = world.entities();
-    
-    // We need to know if player is grounded to jump
-    // But we can't borrow grounded immutably and velocities mutably easily if we iterate?
-    // Actually we can.
     
     for (entity, vel, player) in (&entities, &mut velocities, &players).join() {
         let is_grounded = grounded.get(entity).is_some();
